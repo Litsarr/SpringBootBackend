@@ -22,11 +22,9 @@ public class UserController {
     public ResponseEntity<User> getCurrentUser(Authentication authentication) {
         String username = ((UserDetails) authentication.getPrincipal()).getUsername();
         User user = userService.findUserByUsername(username);
-
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
-
         return ResponseEntity.ok(user);
     }
 

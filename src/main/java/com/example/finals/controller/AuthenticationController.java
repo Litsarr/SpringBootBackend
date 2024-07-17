@@ -42,6 +42,19 @@ public class AuthenticationController {
     @Qualifier("passwordEncoder")
     private PasswordEncoder passwordEncoder;
 
+    // Response class to encapsulate JWT in a structured JSON
+    private static class JwtResponse {
+        private final String jwt;
+
+        public JwtResponse(String jwt) {
+            this.jwt = jwt;
+        }
+
+        public String getJwt() {
+            return jwt;
+        }
+    }
+
     @PostMapping("/authenticate")
     public ResponseEntity<?> createAuthenticationToken(@RequestBody User user) throws Exception {
         logger.debug("Attempting to authenticate user: {}", user.getUsername());
@@ -50,28 +63,22 @@ public class AuthenticationController {
         } catch (BadCredentialsException e) {
             logger.error("Invalid credentials for user: {}", user.getUsername());
             return ResponseEntity.status(401).body("Incorrect username or password");
-        } catch (Exception e) {
-            logger.error("Authentication failed for user: {}", user.getUsername(), e);
-            throw new Exception("Authentication failed", e);
         }
 
         final UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         final String jwt = jwtUtil.generateToken(userDetails);
 
         logger.debug("User authenticated successfully: {}", user.getUsername());
-        return ResponseEntity.ok(jwt);
+        return ResponseEntity.ok(new JwtResponse(jwt)); // Return JWT wrapped in JSON
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
         logger.debug("Registering new user: {}", user.getUsername());
-        logger.debug("Original password: {}", user.getPassword());
         String encodedPassword = passwordEncoder.encode(user.getPassword());
-        logger.debug("Encoded password: {}", encodedPassword);
         user.setPassword(encodedPassword);
         User newUser = userService.saveUser(user);
         logger.debug("User registered successfully: {}", user.getUsername());
         return ResponseEntity.ok(newUser);
     }
-
 }

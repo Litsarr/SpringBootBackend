@@ -7,7 +7,8 @@ import com.example.finals.service.ExpenseService;
 import com.example.finals.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,23 +17,24 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/expenses")
 public class ExpenseController {
+
     @Autowired
     private ExpenseService expenseService;
 
     @Autowired
     private UserService userService;
 
-    @GetMapping("/")
-    public List<ExpenseDTO> getAllExpenses(Authentication authentication) {
-        List<Expense> expenses = expenseService.findAllExpensesForUser(authentication.getName());
+    @GetMapping
+    public List<ExpenseDTO> getAllExpenses(@AuthenticationPrincipal UserDetails userDetails) {
+        List<Expense> expenses = expenseService.findAllExpensesForUser(userDetails.getUsername());
         return expenses.stream()
                 .map(expense -> new ExpenseDTO(expense.getId(), expense.getAmount(), expense.getDescription(), expense.getDate(), expense.getUser().getId()))
                 .collect(Collectors.toList());
     }
 
-    @PostMapping("/")
-    public ResponseEntity<?> createExpense(@RequestBody ExpenseDTO expenseDTO, Authentication authentication) {
-        User user = userService.findUserByUsername(authentication.getName());
+    @PostMapping
+    public ResponseEntity<?> createExpense(@RequestBody ExpenseDTO expenseDTO, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.findUserByUsername(userDetails.getUsername());
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
@@ -48,8 +50,8 @@ public class ExpenseController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateExpense(@PathVariable Long id, @RequestBody ExpenseDTO expenseDTO, Authentication authentication) {
-        User user = userService.findUserByUsername(authentication.getName());
+    public ResponseEntity<?> updateExpense(@PathVariable Long id, @RequestBody ExpenseDTO expenseDTO, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.findUserByUsername(userDetails.getUsername());
         Expense existingExpense = expenseService.findExpenseById(id);
         if (existingExpense == null || user == null || !existingExpense.getUser().getId().equals(user.getId())) {
             return ResponseEntity.notFound().build();
@@ -64,8 +66,8 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteExpense(@PathVariable Long id, Authentication authentication) {
-        User user = userService.findUserByUsername(authentication.getName());
+    public ResponseEntity<?> deleteExpense(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.findUserByUsername(userDetails.getUsername());
         Expense expense = expenseService.findExpenseById(id);
         if (expense == null || user == null || !expense.getUser().getId().equals(user.getId())) {
             return ResponseEntity.notFound().build();
